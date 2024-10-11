@@ -1,84 +1,42 @@
-const questions = [
-    {
-        question: ["quando o gui vai arrumar uma namorada?"],
-        options: ["Nunca, Nunquinha, Em nenhum momento, Nem morto"],
-        ansewer: ["Nunca"],
-    },
-    {
-        question: "",
-        options: "",
-        ansewer: "",
-    }, {
-        question: "",
-        options: "",
-        ansewer: "",
-    },
-]
-
-    let currentQuestionIndex = 0;
-    let score = 0;
-
-    function showModal(){
-        const modal = document.getElementById('modal');
-        const questionsElement = document.getElementById('modal-question');
-        const optionsElement = document.getElementById('modal-options');
-        const nextButton = document.getElementById('next-question');
-        const feedbackElement = document.getElementById('feedback');
-        
-        const question = questions[currentQuestionIndex];
-        questionsElement.textContent = question.question;
-        optionsElement.innerHTML = '';
-
-        question.options.forEach(option =>{
-            const label = document.createElement('input');
-            label.classList.add('option');
-
-            const input = document.createElement('input');
-            input.type = 'radio';
-            input.name = 'option';
-            input.value = option;
-
-            label.appendChild(input);
-            label.appendChild(document.createTextNode);
-            modal.style.display = 'block';
-        })
-    }
-
-    nextButton.onclick = () => {
-        const selectedOption = document.querySelector('input[name="option"]:checked');
-        if (selectedOption) {
-            if (selectedOption.value === question.answer) {
-                feedbackElement.textContent = 'Resposta correta!';
-                feedbackElement.classList.add('correct');
-                score++;
-            } else {
-                feedbackElement.textContent = 'Resposta incorreta. A resposta correta é: ' + question.answer;
-                feedbackElement.classList.add('incorrect');
-            }
+const getPokemonUrl = id => `https://pokeapi.co/api/v2/pokemon/${id}`;
  
-            currentQuestionIndex++;
-            if (currentQuestionIndex < questions.length) {
-                setTimeout(showModal, 2000); // Exibe a próxima pergunta após 2 segundos
-            } else {
-                document.getElementById('result').textContent = `Você acertou ${score} de ${questions.length} perguntas.`;
-                document.getElementById('result').classList.add(score === questions.length ? 'correct' : 'incorrect');
-                modal.style.display = 'none';
-                document.getElementById('start').style.display = 'block';
-            }
+const generatePokemonPromises = () =>
+  Array.from({ length: 1025}, (_, index) => {
+    const url = getPokemonUrl(index + 1);
+    return fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Erro ao buscar Pokémon: ${response.status}`);
         }
-    };
-
-document.getElementById('event').addEventListener('click', () =>{
-    document.getElementById('start').style.display =  'none';
-    showModal();
-});
-
-    document.getElementById('event').addEventListener('click', () =>{
-        document.getElementById('modal').style.display =  'none';
-});
-
-window.onclick = (event) => {
-    if (event.target == document.getElementById('modal')){
-        document.getElementById('modal').style.display = 'none';
-    }
+        return response.json();
+      });
+  });
+ 
+ 
+const generateHTML = pokemons => {
+  return pokemons.reduce((accumulator, { name, id, types }) => {
+    const elementTypes = types.map(typeInfo => typeInfo.type.name);
+   
+    accumulator += `
+      <li class="card ${elementTypes[0]}">
+        <img class="card-image" alt="${name}" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png">
+        <h2 class="card-title">${id}. ${name}</h2>
+        <p class="card-subtitle">${elementTypes.join(" | ")}</p>
+      </li>
+    `;
+    return accumulator;
+  }, "");
 };
+ 
+ 
+const insertPokemonsIntoPage = pokemons => {
+  const ul = document.querySelector('[data-js="pokedex"]');
+  ul.innerHTML = pokemons;
+};
+ 
+Promise.all(generatePokemonPromises())
+  .then(generateHTML)
+  .then(insertPokemonsIntoPage)
+  .catch(error => {
+    console.error('Erro ao carregar os Pokémon:', error);
+  });
